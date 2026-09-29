@@ -1,10 +1,9 @@
 streamlit
 pandas
 numpy
-pyarrow
+snowflake-connector-python>=3.18.0
 python-dotenv
-snowflake-connector-python[pandas]
-sentence-transformers
-torch
-torchvision
 openai
+sentence-transformers
+scikit-learn
+pyarrow
