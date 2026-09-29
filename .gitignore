@@ -1,0 +1,30 @@
+﻿# Secrets
+.env
+.env.*
+**/.env
+**/.env.*
+credentials
+Credentials
+credentials.*
+Credentials.*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Logs
+logs/
+**/logs/
+*.log
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Large datasets
+Data/
+
+# OS
+.DS_Store
+Thumbs.db
