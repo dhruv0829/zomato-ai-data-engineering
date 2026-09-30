@@ -34,9 +34,24 @@ SIMILARITY_THRESHOLD = 0.35
 # GEMINI CLIENT
 # =========================================================
 
+# Streamlit Cloud uses Streamlit Secrets.
+# Local development can still use .env.
+
+try:
+    GEMINI_API_KEY = st.secrets.get(
+        "GEMINI_API_KEY",
+        os.getenv("GEMINI_API_KEY")
+    )
+except Exception:
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+
 client = OpenAI(
-    api_key=st.secrets["GEMINI_API_KEY"],
-    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+    api_key=GEMINI_API_KEY,
+    base_url=(
+        "https://generativelanguage.googleapis.com/"
+        "v1beta/openai/"
+    )
 )
 
 
@@ -244,6 +259,90 @@ Retrieved customer reviews:
 
 
 # =========================================================
+# HANDLE AI/API ERRORS
+# =========================================================
+
+def get_friendly_error_message(error):
+
+    error_text = str(error).lower()
+
+    # Gemini quota / rate limit / resource exhaustion
+    quota_errors = [
+        "quota",
+        "rate limit",
+        "rate_limit",
+        "resource exhausted",
+        "resource_exhausted",
+        "429",
+        "too many requests",
+        "exceeded"
+    ]
+
+    if any(
+        message in error_text
+        for message in quota_errors
+    ):
+
+        return (
+            "💤 **The chatbot is sleeping... T_T**\n\n"
+            "I've reached the AI usage limit for now. "
+            "Please try again later! ☕\n\n"
+            "📊 The dashboard and data features are "
+            "still available."
+        )
+
+    # Authentication/API key errors
+    auth_errors = [
+        "api key",
+        "authentication",
+        "unauthorized",
+        "401",
+        "invalid api"
+    ]
+
+    if any(
+        message in error_text
+        for message in auth_errors
+    ):
+
+        return (
+            "🔑 **The chatbot needs its key... T_T**\n\n"
+            "The AI service credentials are currently "
+            "unavailable or invalid."
+        )
+
+    # Connection/server errors
+    connection_errors = [
+        "connection",
+        "timeout",
+        "timed out",
+        "503",
+        "502",
+        "500",
+        "server error",
+        "service unavailable"
+    ]
+
+    if any(
+        message in error_text
+        for message in connection_errors
+    ):
+
+        return (
+            "😴 **The chatbot is temporarily unavailable... T_T**\n\n"
+            "The AI service isn't responding right now. "
+            "Please try again later."
+        )
+
+    # Generic fallback
+    return (
+        "😵 **The chatbot ran into a little problem... T_T**\n\n"
+        "I couldn't generate a response right now. "
+        "Please try again later."
+    )
+
+
+# =========================================================
 # STREAMLIT PAGE
 # =========================================================
 
@@ -266,7 +365,9 @@ def render():
 
     except Exception as e:
 
-        st.error(str(e))
+        st.error(
+            "Unable to load the review dataset."
+        )
 
         return
 
@@ -294,14 +395,27 @@ def render():
     # RETRIEVAL
     # -----------------------------------------------------
 
-    with st.spinner(
-        "Searching the reviews..."
-    ):
+    try:
 
-        top_reviews = find_similar_reviews(
-            question,
-            review_df
-        )
+        with st.spinner(
+            "Searching the reviews..."
+        ):
+
+            top_reviews = find_similar_reviews(
+                question,
+                review_df
+            )
+
+    except Exception:
+
+        with st.chat_message("assistant"):
+
+            st.warning(
+                "🔎 I couldn't search the review "
+                "database right now. Please try again."
+            )
+
+        return
 
     # -----------------------------------------------------
     # RELEVANCE
@@ -337,9 +451,8 @@ def render():
 
         except Exception as e:
 
-            answer = (
-                "The AI model is temporarily "
-                f"unavailable: {e}"
+            answer = get_friendly_error_message(
+                e
             )
 
     # -----------------------------------------------------
@@ -348,4 +461,31 @@ def render():
 
     with st.chat_message("assistant"):
 
-        st.write(answer)
+        if answer.startswith("💤"):
+
+            st.warning(answer)
+
+        elif answer.startswith("🔑"):
+
+            st.warning(answer)
+
+        elif answer.startswith("😴"):
+
+            st.warning(answer)
+
+        elif answer.startswith("😵"):
+
+            st.warning(answer)
+
+        else:
+
+            st.write(answer)
+
+
+# =========================================================
+# RUN
+# =========================================================
+
+if __name__ == "__main__":
+
+    render()
