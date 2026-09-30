@@ -17,7 +17,10 @@ load_dotenv()
 
 CACHE_FILE = os.getenv(
     "RAG_CACHE_FILE",
-    "review_embeddings.parquet"
+    os.path.join(
+        os.path.dirname(__file__),
+        "review_embeddings.parquet"
+    )
 )
 
 CHAT_MODEL = os.getenv(
